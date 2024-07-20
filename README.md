@@ -47,6 +47,8 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 使用Python编译程序即可
 
+**注意⚠️: Python版本需要>=3.10**
+
 ```shell
 python ./cwconsole.py
 ```
