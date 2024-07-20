@@ -1,2 +1,4 @@
 latex2sympy2~=1.9.1
 sympy~=1.12
+
+pytest~=7.4.4

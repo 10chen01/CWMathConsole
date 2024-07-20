@@ -1,5 +1,5 @@
-import pytest
 import cwconsole
+import pytest
 
 
 class TestConsole:

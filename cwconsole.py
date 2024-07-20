@@ -1,4 +1,3 @@
-import os
 from sympy import *
 import latex2sympy2
 import turtle
