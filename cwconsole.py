@@ -20,16 +20,24 @@ command_information = {
         command=["help"],
         argument={}
     ),
-    "exit_quit": CommandInformation(
+    "exit/quit": CommandInformation(
         command=["exit", "quit"],
         argument={}
     ),
-    "define_create": CommandInformation(
+    "define/create": CommandInformation(
         command=["define", "create"],
         argument={
             ("var", "variable"): "创建一个变量",
             ("func", "function"): "创建一个函数"
         }
+    ),
+    "redef/update": CommandInformation(
+        command=["redef", "update"],
+        argument={}
+    ),
+    "calc/eval": CommandInformation(
+        command=["calc", "eval"],
+        argument={}
     ),
     "pyrun": CommandInformation(
         command=["pyrun"],
@@ -100,10 +108,11 @@ def help_document(_command_information: CommandInformation):
                     print(f"\t{'|'.join(_arg_h)}:  {_arg_v}")
             else:
                 print("No Argument.")
-            print("\n")
+            # print("\n")
+            print()
             command_help()
 
-        _wrapper_document.__name__ = "Command_" +"_".join(_command_information.command) + "_doc"
+        _wrapper_document.__name__ = "Command_" + "_".join(_command_information.command) + "_doc"
         return _wrapper_document
 
     return _wrapper_decorator
@@ -111,18 +120,28 @@ def help_document(_command_information: CommandInformation):
 
 @help_document(command_information["help"])
 def help_doc() -> None:
-    ...
+    print("获取帮助信息")
 
 
-@help_document(command_information["exit_quit"])
+@help_document(command_information["exit/quit"])
 def exit_quit_doc() -> None:
     print("退出CWConsole的命令")
 
 
-@help_document(command_information["define_create"])
+@help_document(command_information["define/create"])
 def define_create_doc() -> None:
     print("此命令将会创建一个数学对象")
     print("若不在命令中指定var/func类型将会在单独打开命令后输入类型")
+
+
+@help_document(command_information["redef/update"])
+def redef_update_doc() -> None:
+    print("用于修改变量/函数的表达式/值")
+
+
+@help_document(command_information["calc/eval"])
+def calc_eval_doc() -> None:
+    print("用于计算变量/表达式的值")
 
 
 @help_document(command_information["pyrun"])
@@ -179,10 +198,12 @@ if __name__ == '__main__':
                 # @closing_command
                 def help_main() -> None:
                     print("常用的命令:")
-                    print("\tpyrun")
-                    print("\tdefine/create")
-                    print("\texit/quit")
-                    print("\thelp")
+                    # print("\t pyrun")
+                    # print("\t define/create")
+                    # print("\t exit/quit")
+                    # print("\t help")
+                    for _cmd_name in command_information.keys():
+                        print("\t" + _cmd_name)
                     print("")
                     print("可通过help [command]的形式获取具体命令的操作")
 
@@ -191,14 +212,19 @@ if __name__ == '__main__':
                     match _command:
                         case "help":
                             help_doc()
-                        case "exit" | "quit":
+                        case "exit" | "quit" | "exit/quit" | "quit/exit":
                             exit_quit_doc()
-                        case "define" | "create":
+                        case "define" | "create" | "define/create" | "create_define":
                             define_create_doc()
+                        case "redef" | "update" | "redef/update" | "update/redef":
+                            redef_update_doc()
+                        case "calc" | "eval" | "eval/calc" | "calc/eval":
+                            calc_eval_doc()
                         case "pyrun":
                             pyrun_doc()
                         case _:
                             print("未知的命令, 无法提供帮助@^@")
+
 
                 if len(command_lst) == 1:
                     help_main()
@@ -258,7 +284,7 @@ if __name__ == '__main__':
 
                 _create_type: Literal["variable", "function"]
                 if len(command_lst) == 1:
-                    _create_type_prompt: str = input("请输入创建对象的类型[var | func]:")
+                    _create_type_prompt: str = input("请输入创建对象的类型[var | func]:>>")
                 else:
                     _create_type_prompt = command_lst[1]
                 match _create_type_prompt:
@@ -282,9 +308,15 @@ if __name__ == '__main__':
 
                 _solve_equation()
             case "redef" | "update":
-                @closing_command
                 def _redefine_variable() -> None:
-                    ...
+                    var_name = input("要修改的变量符号:>>")
+                    value_str = input("修改的值:>>")
+                    try:
+                        value_expr = latex2sympy2.latex2sympy(value_str)
+                    except Exception as e:
+                        print("表达式错误:", e)
+                        return
+                    var_dictionary[Symbol(var_name)] = value_expr
 
 
                 _redefine_variable()
@@ -296,9 +328,18 @@ if __name__ == '__main__':
 
                 _remove_variable()
             case "calc" | "eval":
-                @closing_command
                 def _calculate_expression() -> None:
-                    expr = input("请输入表达式:>>")
+                    expr_str: str = input("请输入表达式:>>")
+                    try:
+                        expr = latex2sympy2.latex2sympy(expr_str)
+                    except Exception as e:
+                        print("表达式错误", e)
+                        return
+                    try:
+                        print("表达式化简形式:<<", simplify(expr))
+                    except:
+                        print("无法化简")
+                    print("表达式求值(以目前变量):<<", expr.evalf(subs=var_dictionary))
 
 
                 _calculate_expression()
@@ -308,7 +349,7 @@ if __name__ == '__main__':
                     global INIT_GRAPH
                     turtle.speed(0)
                     if not INIT_GRAPH:
-                        is_draw_grid = input("是否绘制坐标网格?([y]/n): ")
+                        is_draw_grid = input("是否绘制坐标网格?([y]/n):>>")
                         if is_draw_grid.lower().strip() != "n":
                             draw_grid()
                         INIT_GRAPH = True
@@ -319,7 +360,7 @@ if __name__ == '__main__':
                     global INIT_GRAPH
                     turtle.speed(0)
                     if not INIT_GRAPH:
-                        is_draw_grid = input("是否绘制坐标网格?([y]/n): ")
+                        is_draw_grid = input("是否绘制坐标网格?([y]/n):>> ")
                         if is_draw_grid.lower().strip() != "n":
                             draw_grid()
 
@@ -328,7 +369,7 @@ if __name__ == '__main__':
             case "pyrun":
                 @extension_command
                 def run_pycode() -> None:
-                    if  len(command_lst) > 1 and command_lst[1] == "file":
+                    if len(command_lst) > 1 and command_lst[1] == "file":
                         print("执行python代码")
                         if len(command_lst) == 2:
                             file_name = input("请输入python文件路径")
