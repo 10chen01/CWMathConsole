@@ -60,13 +60,16 @@ python ./cwconsole.py
 First, you need to install `pyinstaller`.
 
 ```shell
+# python package
 pip install pyinstaller
+# anaconda
+conda install pyinstaller
 ```
 
 Then use `pyinstaller` to package the software.
 
 ```shell
-python -m pyinstaller -f cwconsole.py
+pyinstaller.exe -F cwconsole.py
 ```
 
 This will yield the executable version of CWMathConsole.
