@@ -1,4 +1,5 @@
 from sympy import *
+from re import *
 import latex2sympy2
 import turtle
 from typing import *
@@ -149,6 +150,30 @@ def pyrun_doc() -> None:
     print("可以使用pyrun命令运行python代码")
     print("如果不指定file参数将会进入pyshell模式, 可以使用[CWConsole]退出")
     print("如果指定file参数将会运行file参数指定的文件")
+
+
+def solve_equation(latex_text, formatter='sympy'):
+    try:
+        regex = r"\\begin{cases}([\s\S]*)\\end{cases}"
+        matches = findall(regex, latex_text, MULTILINE)
+        equations = []
+        if matches:
+            matches = split(r"\\\\(?:\[?.*?])?", matches[0])
+            for _match in matches:
+                ins = latex2sympy2.latex2sympy(_match)
+                if type(ins) == list:
+                    equations.extend(ins)
+                else:
+                    equations.append(ins)
+            solved = solve(equations)
+        else:
+            return False
+        if formatter == 'latex':
+            return latex(solved)
+        else:
+            return solved
+    except:
+        print("表达式错误>_<")
 
 
 def draw_grid() -> None:
@@ -302,12 +327,34 @@ if __name__ == '__main__':
                     case "function":
                         _create_function()
             case "solve":
-                @closing_command
                 def _solve_equation() -> None:
-                    ...
+                    equation = input("请输入方程:>>")
+                    try:
+                        res = solve(latex2sympy2.latex2sympy(equation))
+                    except Exception as e:
+                        print("表达式错误:\t", e)
+                        return
+                    print(latex(res))
 
+                def _solve_equation_cases() -> None:
+                    equation = input("请输入方程组:>>")
+                    try:
+                        result = solve_equation(equation, formatter="latex")
+                    except Exception as e:
+                        print("表达式错误", e)
 
-                _solve_equation()
+                # _solve_type: Literal["once", "multi"]
+                if len(command_lst) == 1:
+                    _solve_str = input("请输入求解类型[once | multi]:>>")
+                else:
+                    _solve_str = command_lst[1]
+                match _solve_str:
+                    case "once":
+                        _solve_equation()
+                    case "multi":
+                        _solve_equation_cases()
+                    case _:
+                        print("未知类型:", _solve_str)
             case "redef" | "update":
                 def _redefine_variable() -> None:
                     var_name = input("要修改的变量符号:>>")
