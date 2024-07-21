@@ -276,6 +276,7 @@ if __name__ == '__main__':
                         return
                     try:
                         _variable_value = latex2sympy2.latex2sympy(_variable_str)
+                        print("函数的解析式为: ", latex(_variable_value))
                     except Exception as e:
                         print("表达式错误: ", e)
                         return
@@ -336,10 +337,10 @@ if __name__ == '__main__':
                         print("表达式错误", e)
                         return
                     try:
-                        print("表达式化简形式:<<", simplify(expr))
+                        print("表达式化简形式:<<", latex(simplify(expr)))
                     except:
                         print("无法化简")
-                    print("表达式求值(以目前变量):<<", expr.evalf(subs=var_dictionary))
+                    print("表达式求值(以目前变量):<<", latex(expr.evalf(subs=var_dictionary)))
 
 
                 _calculate_expression()
