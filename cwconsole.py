@@ -2,11 +2,43 @@ from sympy import *
 import latex2sympy2
 import turtle
 from typing import *
-
+from dataclasses import dataclass
 
 INIT_GRAPH = False
 EXTEND_VERSION = True
 
+
+@dataclass
+class CommandInformation:
+    command: list[str]
+    argument: dict[tuple[str, ...], str]
+    extend_version_command: bool = False
+
+
+command_information = {
+    "help": CommandInformation(
+        command=["help"],
+        argument={}
+    ),
+    "exit_quit": CommandInformation(
+        command=["exit", "quit"],
+        argument={}
+    ),
+    "define_create": CommandInformation(
+        command=["define", "create"],
+        argument={
+            ("var", "variable"): "创建一个变量",
+            ("func", "function"): "创建一个函数"
+        }
+    ),
+    "pyrun": CommandInformation(
+        command=["pyrun"],
+        argument={
+            ("[file]",): "运行python文件"
+        },
+        extend_version_command=True
+    )
+}
 var_dictionary: dict = {}
 function_information: dict = {}
 
@@ -56,7 +88,55 @@ def closing_command(_: Callable) -> Callable:
     return not_opened_command_used_error
 
 
+def help_document(_command_information: CommandInformation):
+    def _wrapper_decorator(command_help: Callable) -> Callable:
+        def _wrapper_document():
+            print("Command:", "|".join(_command_information.command))
+            if _command_information.extend_version_command:
+                print("Extend Version Only.")
+            if _command_information.argument != {}:
+                print("Argument:")
+                for _arg_h, _arg_v in _command_information.argument.items():
+                    print(f"\t{'|'.join(_arg_h)}:  {_arg_v}")
+            else:
+                print("No Argument.")
+            print("\n")
+            command_help()
+
+        _wrapper_document.__name__ = "Command_" +"_".join(_command_information.command) + "_doc"
+        return _wrapper_document
+
+    return _wrapper_decorator
+
+
+@help_document(command_information["help"])
+def help_doc() -> None:
+    ...
+
+
+@help_document(command_information["exit_quit"])
+def exit_quit_doc() -> None:
+    print("退出CWConsole的命令")
+
+
+@help_document(command_information["define_create"])
+def define_create_doc() -> None:
+    print("此命令将会创建一个数学对象")
+    print("若不在命令中指定var/func类型将会在单独打开命令后输入类型")
+
+
+@help_document(command_information["pyrun"])
+def pyrun_doc() -> None:
+    print("可以使用pyrun命令运行python代码")
+    print("如果不指定file参数将会进入pyshell模式, 可以使用[CWConsole]退出")
+    print("如果指定file参数将会运行file参数指定的文件")
+
+
 def draw_grid() -> None:
+    """
+    绘制坐标系网格
+    :return:
+    """
     turtle.color("#cccccc")
     for x in range(-400, 400, 20):
         turtle.penup()
@@ -95,17 +175,29 @@ if __name__ == '__main__':
         match main_command:
             case "help":
                 # 帮助命令
-                print("这里是一些常用的命令")
-                print("如果你需要更多的帮助, 请查看README.md文档")
 
-
-                @closing_command
-                def help_command() -> None:
+                # @closing_command
+                def help_main() -> None:
                     ...
 
 
-                help_command()
-                continue
+                def help_command(_command: str) -> None:
+                    match _command:
+                        case "help":
+                            help_doc()
+                        case "exit" | "quit":
+                            exit_quit_doc()
+                        case "define" | "create":
+                            define_create_doc()
+                        case "pyrun":
+                            pyrun_doc()
+                        case _:
+                            print("未知的命令, 无法提供帮助@^@")
+
+                if len(command_lst) == 1:
+                    help_main()
+                else:
+                    help_command(command_lst[1])
             case "exit" | "quit":
                 # 退出的指令
                 print("good bye!")
@@ -115,11 +207,17 @@ if __name__ == '__main__':
                 # 创建变量或函数的指令
 
                 def _create_variable() -> None:
-                    while (_variable_name := input("请输入变量的符号:>>").strip()) != "":
-                        print("变量符号不能为空, 请重新输入")
+                    # while (_variable_name := input("请输入变量的符号:>>").strip()) != "":
+                    #     print("变量符号不能为空, 请重新输入")
+                    _variable_name = input("请输入变量的符号:>>").strip()
+                    print("输入的变量的符号为", _variable_name)
+                    if _variable_name == "":
+                        print("输入变量的符号不能为空")
                     _variable_symbol = Symbol(_variable_name)
-                    while (_variable_str := input("请输入变量的值:>>").strip()) != "":
-                        print("变量的值不能为空, 请重新输入")
+                    # while (_variable_str := input("请输入变量的值:>>").strip()) != "":
+                    #     print("变量的值不能为空, 请重新输入")
+                    _variable_str = input("请输入变量的值:>>").strip()
+                    print("输入变量的值为", _variable_str)
                     try:
                         _variable_value = latex2sympy2.latex2sympy(_variable_str)
                     except Exception as e:
@@ -129,11 +227,21 @@ if __name__ == '__main__':
 
 
                 def _create_function() -> None:
-                    while (_variable_name := input("请输入函数的符号:>>").strip()) != "":
-                        print("函数符号不能为空, 请重新输入")
+                    # while (_variable_name := input("请输入函数的符号:>>").strip()) != "":
+                    #     print("函数符号不能为空, 请重新输入")
+                    _variable_name: str
+                    _variable_name = input("请输入函数的符号:>>").strip()
+                    if _variable_name == "":
+                        print("函数符号不能为空")
+                        return
                     _variable_symbol = Symbol(_variable_name)
-                    while (_variable_str := input("请输入函数的解析式:>>").strip()) != "":
-                        print("函数的解析式不能为空, 请重新输入")
+                    # while (_variable_str := input("请输入函数的解析式:>>").strip()) != "":
+                    #     print("函数的解析式不能为空, 请重新输入")
+                    _variable_str: str
+                    _variable_str = input("请输入函数的解析式:>>").strip()
+                    if _variable_str == "":
+                        print("函数解析式不能为空")
+                        return
                     try:
                         _variable_value = latex2sympy2.latex2sympy(_variable_str)
                     except Exception as e:
@@ -184,22 +292,37 @@ if __name__ == '__main__':
             case "calc" | "eval":
                 @closing_command
                 def _calculate_expression() -> None:
-                    ...
+                    expr = input("请输入表达式:>>")
 
 
                 _calculate_expression()
             case "graph":
-                turtle.speed(0)
-                if not INIT_GRAPH:
-                    is_draw_grid = input("是否绘制坐标网格?([y]/n): ")
-                    if is_draw_grid.lower().strip() != "n":
-                        draw_grid()
-                    INIT_GRAPH = True
+                @closing_command
+                def _graph_function(fun_name: str) -> None:
+                    global INIT_GRAPH
+                    turtle.speed(0)
+                    if not INIT_GRAPH:
+                        is_draw_grid = input("是否绘制坐标网格?([y]/n): ")
+                        if is_draw_grid.lower().strip() != "n":
+                            draw_grid()
+                        INIT_GRAPH = True
+
+
+                @closing_command
+                def _graph_pol_function(fun_name: str) -> None:
+                    global INIT_GRAPH
+                    turtle.speed(0)
+                    if not INIT_GRAPH:
+                        is_draw_grid = input("是否绘制坐标网格?([y]/n): ")
+                        if is_draw_grid.lower().strip() != "n":
+                            draw_grid()
+
+
                 ...
             case "pyrun":
                 @extension_command
                 def run_pycode() -> None:
-                    if command_lst[1] == "file":
+                    if  len(command_lst) > 1 and command_lst[1] == "file":
                         print("执行python代码")
                         if len(command_lst) == 2:
                             file_name = input("请输入python文件路径")
@@ -225,7 +348,7 @@ if __name__ == '__main__':
                         try:
                             # 默认在python shell中的变量与是这个代码的全局变量域
                             # 目前暂不支持长篇python代码的编写和运行
-                            exec(command, __globals=globals())
+                            exec(command)
                         except Exception as e:
                             print("执行错误: ", e)
                     print("已退出python模式")
