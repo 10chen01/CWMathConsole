@@ -40,6 +40,17 @@ command_information = {
         command=["calc", "eval"],
         argument={}
     ),
+    "undef/update": CommandInformation(
+        command=["undef", "update"],
+        argument={}
+    ),
+    "solve": CommandInformation(
+        command=["solve"],
+        argument={
+            ("once",): "以单一方程形式解方程",
+            ("multi",): "以方程组形式解方程"
+        }
+    ),
     "pyrun": CommandInformation(
         command=["pyrun"],
         argument={
@@ -150,6 +161,12 @@ def pyrun_doc() -> None:
     print("可以使用pyrun命令运行python代码")
     print("如果不指定file参数将会进入pyshell模式, 可以使用[CWConsole]退出")
     print("如果指定file参数将会运行file参数指定的文件")
+
+
+@help_document(command_information["solve"])
+def solve_doc() -> None:
+    print("此命令用于解方程/方程组/不等式/不等式组")
+    print("使用once命令可解单一方程")
 
 
 def solve_equation(latex_text, formatter='sympy'):
@@ -329,8 +346,13 @@ if __name__ == '__main__':
             case "solve":
                 def _solve_equation() -> None:
                     equation = input("请输入方程:>>")
+                    # unknowns = input("请输入方程的求解元:>>")
                     try:
-                        res = solve(latex2sympy2.latex2sympy(equation))
+                        expr = latex2sympy2.latex2sympy(equation)
+                        if isinstance(expr, list):
+                            res = solve(expr)
+                        else:
+                            res = solve([expr])
                     except Exception as e:
                         print("表达式错误:\t", e)
                         return
@@ -342,6 +364,8 @@ if __name__ == '__main__':
                         result = solve_equation(equation, formatter="latex")
                     except Exception as e:
                         print("表达式错误", e)
+                        return
+                    print(result)
 
                 # _solve_type: Literal["once", "multi"]
                 if len(command_lst) == 1:
@@ -396,6 +420,7 @@ if __name__ == '__main__':
 
                 _calculate_expression()
             case "graph":
+                # 还没有开发好, 敬请期待吧
                 @closing_command
                 def _graph_function(fun_name: str) -> None:
                     global INIT_GRAPH
