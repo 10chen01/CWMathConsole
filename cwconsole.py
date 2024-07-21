@@ -169,7 +169,7 @@ def solve_doc() -> None:
     print("使用once命令可解单一方程")
 
 
-def solve_equation(latex_text, formatter='sympy'):
+def solve_equation(latex_text, formatter: Literal['sympy', 'latex']= 'sympy'):
     try:
         regex = r"\\begin{cases}([\s\S]*)\\end{cases}"
         matches = findall(regex, latex_text, MULTILINE)
