@@ -88,10 +88,10 @@ def not_opened_command_used_error(*_, **__) -> None:
     print("更多信息详情请见README.md和github")
 
 
-def closing_command(_: Callable) -> Callable:
+def closing_command(_command: Callable) -> Callable:
     """
     这是一个装饰器, 被装饰过的函数将被标记为未开放并替换为not_opened_command_used_error函数
-    :param _:
+    :param _command:
     :return:
     """
     return not_opened_command_used_error
@@ -369,9 +369,13 @@ if __name__ == '__main__':
 
                 _redefine_variable()
             case "undef" | "remove":
-                @closing_command
                 def _remove_variable() -> None:
-                    ...
+                    variable_name = input("请输入需要删除的对象符号:>>")
+                    var_symbol = Symbol(variable_name)
+                    if var_symbol in var_dictionary.keys():
+                        del var_dictionary[var_symbol]
+                    else:
+                        print("未找到相应函数")
 
 
                 _remove_variable()
@@ -412,8 +416,15 @@ if __name__ == '__main__':
                         if is_draw_grid.lower().strip() != "n":
                             draw_grid()
 
+                if _graph_function == _graph_pol_function == not_opened_command_used_error:
+                    not_opened_command_used_error()
+                    continue
 
-                ...
+                if len(command_lst) == 1:
+                    _fun_type = input("请输入画图的函数类型[rec | pol]:")
+                else:
+                    _fun_type = command_lst[1]
+
             case "pyrun":
                 @extension_command
                 def run_pycode() -> None:
