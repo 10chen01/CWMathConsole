@@ -178,7 +178,13 @@ if __name__ == '__main__':
 
                 # @closing_command
                 def help_main() -> None:
-                    ...
+                    print("常用的命令:")
+                    print("\tpyrun")
+                    print("\tdefine/create")
+                    print("\texit/quit")
+                    print("\thelp")
+                    print("")
+                    print("可通过help [command]的形式获取具体命令的操作")
 
 
                 def help_command(_command: str) -> None:
