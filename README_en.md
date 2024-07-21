@@ -1,7 +1,5 @@
 # CWMathConsole
 
-[English EN](./README_en.md) | [简体中文 CN](./README_cn.md)
-
 A simple terminal for performing mathematical calculations.
 
 Currently under development...
