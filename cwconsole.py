@@ -15,7 +15,7 @@ class CommandInformation:
     argument: dict[tuple[str, ...], str]
     extend_version_command: bool = False
 
-
+# region
 command_information = {
     "help": CommandInformation(
         command=["help"],
@@ -54,11 +54,21 @@ command_information = {
     "pyrun": CommandInformation(
         command=["pyrun"],
         argument={
-            ("[file]",): "运行python文件"
+            ("[file]",): "运行python文件",
+            ("$file", ): "若带file参数则运行文件$file"
         },
         extend_version_command=True
+    ),
+    "graph": CommandInformation(
+        command=["graph"],
+        argument={
+            ("rec", ): "以平面直角坐标系的为基础绘制函数图像",
+            ("pol", ): "以极坐标系为基础绘制函数图像",
+            ("$func", ): "绘制$func的图像"
+        }
     )
 }
+# endregion
 var_dictionary: dict = {}
 function_information: dict = {}
 
@@ -169,7 +179,14 @@ def solve_doc() -> None:
     print("使用once命令可解单一方程")
 
 
-def solve_equation(latex_text, formatter: Literal['sympy', 'latex']= 'sympy'):
+@help_document(command_information["graph"])
+def graph_doc() -> None:
+    print("此命令用户绘制函数图像")
+    print("可以指定颜色/粗细/基准单位")
+    print("可以选择绘制网格")
+
+
+def solve_equation(latex_text, formatter: Literal['sympy', 'latex'] = 'sympy'):
     try:
         regex = r"\\begin{cases}([\s\S]*)\\end{cases}"
         matches = findall(regex, latex_text, MULTILINE)
@@ -189,37 +206,155 @@ def solve_equation(latex_text, formatter: Literal['sympy', 'latex']= 'sympy'):
             return latex(solved)
         else:
             return solved
-    except:
-        print("表达式错误>_<")
+    except Exception as e:
+        print("表达式错误>_< :", e)
 
 
-def draw_grid() -> None:
+class FunctionGrapher:
     """
-    绘制坐标系网格
-    :return:
+    坐标系画图类
     """
-    turtle.color("#cccccc")
-    for x in range(-400, 400, 20):
-        turtle.penup()
-        turtle.goto(x, -400)
-        turtle.pendown()
-        turtle.goto(x, 400)
-        turtle.penup()
-        turtle.goto(-400, x)
-        turtle.pendown()
-        turtle.goto(400, x)
-        turtle.penup()
-    turtle.width(2)
-    turtle.color("#444444")
-    turtle.goto(-400, 0)
-    turtle.pendown()
-    turtle.goto(400, 0)
-    turtle.penup()
-    turtle.goto(0, -400)
-    turtle.pendown()
-    turtle.goto(0, 400)
-    turtle.penup()
 
+    def __init__(self, pol_graph: bool = False):
+        self.pen = turtle.Turtle()
+        self.pen.speed(0)
+        self.pol_graph = pol_graph
+        iden_str = input("请输入一个单位长度所对应的像素个数(默认10px):>>")
+        try:
+            self.iden = latex2sympy2.latex2sympy(iden_str).evalf(subs=var_dictionary)
+            if self.iden <= 0:
+                self.iden = 10
+                print("错误: 像素个数不能为负数或零")
+                print("已设置为默认值10")
+        except Exception as e:
+            self.iden = 10
+            print("错误: ", e)
+            print("已设定为默认值10")
+        pnt_str = input("请输入画图的精度(一个正整数, 默认为2):>>")
+        try:
+            self.pnt = int(pnt_str)
+            print("已将画图的精度设置为", self.pnt)
+        except Exception as e:
+            self.pnt = 2
+            print("错误: ", e)
+            print("已将画图的精度设置为默认值2")
+        have_to_draw_grid = input("是否绘制网格[(y)/n]:>>")
+        if have_to_draw_grid != "n":
+            grid_pts = input("请输入网格的线与线之间的距离(单位长度的多少, 默认为1):>>")
+            try:
+                grid_pt = int(grid_pts)
+            except Exception as e:
+                grid_pt = 1
+                print("错误: ", e)
+                print("已将网格的线与线之间的距离设置为默认值1")
+            self.draw_grid(grid_pt)
+
+    @staticmethod
+    def translate_polar(r: float, theta: float) -> tuple[float, float]:
+        """
+        将极坐标转换为直角坐标
+        :param r: 极坐标x
+        :param theta: 极坐标y
+        :return: 直角坐标
+        """
+        return nfloat(r * cos(theta)), nfloat(r * sin(theta))
+
+    def draw_function(self, func, color, width, l_limit: float, r_limit: float) -> None:
+        self.pen.penup()
+        if not self.pol_graph:
+            try:
+                try:
+                    self.pen.width(width)
+                except Exception as e:
+                    print("出现错误", e)
+                    self.pen.width(1)
+                    print("已自动将笔粗细调味默认值:1")
+                try:
+                    self.pen.pencolor(color)
+                except Exception as e:
+                    print("出现错误: ", e)
+                    self.pen.pencolor("#000000")
+                    print("已自动将笔颜色调为默认值:#000000")
+                pts = 10 ** self.pnt
+                iden = self.iden
+                self.pen.penup()
+                for x in [u / pts for u in range(
+                        round(l_limit * pts),
+                        round(r_limit * pts))]:
+                    try:
+                        y = nfloat(func.evalf(subs=var_dictionary | {Symbol("x"): x}))
+                        if y > 400 * iden or y < -400 * iden or x > 400 * iden or x < -400 * iden:
+                            print(f"警告: ({x=}, {y=})超过画板, 无法画图")
+                            self.pen.penup()
+                        else:
+                            turtle.goto((x * iden, y * iden))
+                            print(x, y)
+                            self.pen.pendown()
+                    except Exception as e:
+                        print(f"警告: 在{x=}时, 无法求出函数值({e})")
+                        self.pen.penup()
+            except Exception as e:
+                print("画图时出现错误: ", e)
+        else:
+            try:
+                self.pen.width(width)
+                self.pen.pencolor(color)
+                pts = 10 ** self.pnt
+                iden = self.iden
+                self.pen.penup()
+                for theta in [u / pts for u in range(
+                        round(l_limit * pts),
+                        round(r_limit * pts))]:
+                    try:
+                        r = nfloat(func.evalf(subs=var_dictionary | {Symbol("theta"): theta}))
+                        if FunctionGrapher.translate_polar(r, theta)[0] > 400 * iden or \
+                                FunctionGrapher.translate_polar(r, theta)[0] < -400 * iden or \
+                                FunctionGrapher.translate_polar(r, theta)[1] > 400 * iden or \
+                                FunctionGrapher.translate_polar(r, theta)[1] < -400 * iden:
+                            print(f"警告: ({theta=}, {r=})超过函数界限, 无法画图")
+                            self.pen.penup()
+                        else:
+                            turtle.goto(tuple([t * iden for t in FunctionGrapher.translate_polar(r, theta)]))
+                            print(FunctionGrapher.translate_polar(r, theta))
+                            self.pen.pendown()
+                    except Exception as e:
+                        print(f"警告: 在{theta=}时, 无法求出函数值({e})")
+                        self.pen.penup()
+            except Exception as e:
+                print("画图时出现错误: ", e)
+
+    def draw_grid(self, u_iden: int) -> None:
+        """
+        绘制坐标系网格
+        :return:
+        """
+        self.pen.color("#cccccc")
+        for x in range(-400, 400, round(u_iden * self.iden)):
+            self.pen.penup()
+            self.pen.goto(x, -400)
+            self.pen.pendown()
+            self.pen.goto(x, 400)
+            self.pen.penup()
+            self.pen.goto(-400, x)
+            self.pen.pendown()
+            self.pen.goto(400, x)
+            self.pen.penup()
+        self.pen.width(2)
+        self.pen.color("#444444")
+        self.pen.goto(-400, 0)
+        self.pen.pendown()
+        self.pen.goto(400, 0)
+        self.pen.penup()
+        self.pen.goto(0, -400)
+        self.pen.pendown()
+        self.pen.goto(0, 400)
+        self.pen.penup()
+        self.pen.color("#000000")
+        self.pen.width(1)
+
+
+grapher: FunctionGrapher
+pol_grapher: FunctionGrapher
 
 if __name__ == '__main__':
     print("CW Console v1.0.0")
@@ -235,6 +370,7 @@ if __name__ == '__main__':
         main_command = command_lst[0]
         match main_command:
             case "help":
+                # region
                 # 帮助命令
 
                 # @closing_command
@@ -264,6 +400,8 @@ if __name__ == '__main__':
                             calc_eval_doc()
                         case "pyrun":
                             pyrun_doc()
+                        case "graph":
+                            graph_doc()
                         case _:
                             print("未知的命令, 无法提供帮助@^@")
 
@@ -272,12 +410,16 @@ if __name__ == '__main__':
                     help_main()
                 else:
                     help_command(command_lst[1])
+                # endregion
             case "exit" | "quit":
+                # region
                 # 退出的指令
                 print("good bye!")
                 # 退出返回值0
                 quit(0)
+                # endregion
             case "define" | "create":
+                # region
                 # 创建变量或函数的指令
 
                 def _create_variable() -> None:
@@ -343,7 +485,9 @@ if __name__ == '__main__':
                         _create_variable()
                     case "function":
                         _create_function()
+                # endregion
             case "solve":
+                # region
                 def _solve_equation() -> None:
                     equation = input("请输入方程:>>")
                     # unknowns = input("请输入方程的求解元:>>")
@@ -358,6 +502,7 @@ if __name__ == '__main__':
                         return
                     print(latex(res))
 
+
                 def _solve_equation_cases() -> None:
                     equation = input("请输入方程组:>>")
                     try:
@@ -366,6 +511,7 @@ if __name__ == '__main__':
                         print("表达式错误", e)
                         return
                     print(result)
+
 
                 # _solve_type: Literal["once", "multi"]
                 if len(command_lst) == 1:
@@ -379,7 +525,9 @@ if __name__ == '__main__':
                         _solve_equation_cases()
                     case _:
                         print("未知类型:", _solve_str)
+                # endregion
             case "redef" | "update":
+                # region
                 def _redefine_variable() -> None:
                     var_name = input("要修改的变量符号:>>")
                     value_str = input("修改的值:>>")
@@ -392,7 +540,9 @@ if __name__ == '__main__':
 
 
                 _redefine_variable()
+                # endregion
             case "undef" | "remove":
+                # region
                 def _remove_variable() -> None:
                     variable_name = input("请输入需要删除的对象符号:>>")
                     var_symbol = Symbol(variable_name)
@@ -403,7 +553,9 @@ if __name__ == '__main__':
 
 
                 _remove_variable()
+                # endregion
             case "calc" | "eval":
+                # region
                 def _calculate_expression() -> None:
                     expr_str: str = input("请输入表达式:>>")
                     try:
@@ -419,27 +571,52 @@ if __name__ == '__main__':
 
 
                 _calculate_expression()
+                # endregion
             case "graph":
-                # 还没有开发好, 敬请期待吧
-                @closing_command
-                def _graph_function(fun_name: str) -> None:
-                    global INIT_GRAPH
-                    turtle.speed(0)
+                # region
+                def _graph_function(function_tex: str) -> None:
+                    global INIT_GRAPH, grapher
+                    _color = input("请输入颜色:>>")
+                    _width = input("请输入粗细:>>")
+                    try:
+                        _l_limit = nfloat(latex2sympy2.latex2sympy(input("请输入函数下界:>>")).evalf(subs=var_dictionary))
+                        _r_limit = nfloat(latex2sympy2.latex2sympy(input("请输入函数上界:>>")).evalf(subs=var_dictionary))
+                        _fun = latex2sympy2.latex2sympy(function_tex)
+                    except Exception as e:
+                        print("错误: ", e)
+                        return
                     if not INIT_GRAPH:
-                        is_draw_grid = input("是否绘制坐标网格?([y]/n):>>")
-                        if is_draw_grid.lower().strip() != "n":
-                            draw_grid()
+                        grapher = FunctionGrapher()
                         INIT_GRAPH = True
+                    grapher.draw_function(
+                        _fun,
+                        color=_color,
+                        width=_width,
+                        l_limit=_l_limit,
+                        r_limit=_r_limit
+                    )
 
-
-                @closing_command
-                def _graph_pol_function(fun_name: str) -> None:
-                    global INIT_GRAPH
-                    turtle.speed(0)
+                def _graph_pol_function(function_tex: str) -> None:
+                    global INIT_GRAPH, pol_grapher
+                    _color = input("请输入颜色:>>")
+                    _width = input("请输入粗细:>>")
+                    try:
+                        _l_limit = nfloat(latex2sympy2.latex2sympy(input("请输入极坐标函数下界:>>")).evalf(subs=var_dictionary))
+                        _r_limit = nfloat(latex2sympy2.latex2sympy(input("请输入极坐标函数上界:>>")).evalf(subs=var_dictionary))
+                        _fun = latex2sympy2.latex2sympy(function_tex)
+                    except Exception as e:
+                        print("错误: ", e)
+                        return
                     if not INIT_GRAPH:
-                        is_draw_grid = input("是否绘制坐标网格?([y]/n):>> ")
-                        if is_draw_grid.lower().strip() != "n":
-                            draw_grid()
+                        pol_grapher = FunctionGrapher(pol_graph=True)
+                        INIT_GRAPH = True
+                    pol_grapher.draw_function(
+                        func=_fun,
+                        color=_color,
+                        width=_width,
+                        l_limit=_l_limit,
+                        r_limit=_r_limit
+                    )
 
                 if _graph_function == _graph_pol_function == not_opened_command_used_error:
                     not_opened_command_used_error()
@@ -449,8 +626,22 @@ if __name__ == '__main__':
                     _fun_type = input("请输入画图的函数类型[rec | pol]:")
                 else:
                     _fun_type = command_lst[1]
-
+                if len(command_lst) == 3:
+                    _fun_expr = command_lst[2]
+                elif len(command_lst) == 2 and command_lst[1] not in ["rec", "pol"]:
+                    _fun_expr = command_lst[1]
+                else:
+                    _fun_expr = input("请输入函数表达式：>>")
+                match _fun_type:
+                    case "rec":
+                        _graph_function(_fun_expr)
+                    case "pol":
+                        _graph_pol_function(_fun_expr)
+                    case _:
+                        print("未知类型:", _fun_type)
+                # endregion
             case "pyrun":
+                # region
                 @extension_command
                 def run_pycode() -> None:
                     if len(command_lst) > 1 and command_lst[1] == "file":
@@ -486,5 +677,6 @@ if __name__ == '__main__':
 
 
                 run_pycode()
+                # endregion
             case _:
                 print(f"未知命令: {main_command}")
