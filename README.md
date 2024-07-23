@@ -126,9 +126,9 @@ Evaluate the value of an expression, which will output both the simplified form 
 
 #### `graph` Command
 
-> *Graph feature not yet developed*
-
 Plot the graph of a function (currently based on turtle).
+
+It can plot the rect/polar functions's graph on turtle panel.
 
 #### `solve` Command
 
